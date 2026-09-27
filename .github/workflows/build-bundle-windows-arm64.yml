@@ -1,0 +1,84 @@
+name: Windows ARM64 Offline Bundle Build (manual)
+
+# 可直接在 GitHub 仓库的 Actions 页点 "Run workflow" 触发，无需改其它配置。
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: 要构建的分支 / tag / commit
+        required: true
+        default: main
+        type: string
+      dsh_tag:
+        description: deepseek-harness-pkg release tag（随包内核版本）
+        required: true
+        default: dsh-0.1.7-rc.2-36024748146
+        type: string
+      bundle_git:
+        description: 是否随包 MinGit
+        required: false
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      source_ref:
+        required: true
+        type: string
+      dsh_tag:
+        required: true
+        type: string
+      bundle_git:
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build offline bundle (windows arm64)
+    runs-on: windows-latest
+    # 离线包要下载 Node/dsh 并压缩数百 MB 资源，远慢于普通构建。
+    timeout-minutes: 180
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref }}
+          persist-credentials: false
+
+      - name: Setup Node.js and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+
+      - name: Install Rust stable + ARM64 target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: aarch64-pc-windows-msvc
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare bundled resources
+        uses: ./.github/actions/prepare-bundle-resources
+        with:
+          platform: windows
+          arch: arm64          # WOA：拉取 node-vX-win-arm64.zip；dsh 仍用通用 windows.zip
+          dsh-tag: ${{ inputs.dsh_tag }}
+          bundle-git: ${{ inputs.bundle_git }}
+
+      # 只出 NSIS：离线包资源有数万个文件，WiX/MSI 既慢又受 2 GB cab 上限约束。
+      - name: Build offline installer (arm64)
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: pnpm tauri build --target aarch64-pc-windows-msvc --bundles nsis
+
+      - name: Upload build outputs
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-bundle-windows-arm64
+          path: src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 7

@@ -148,7 +148,7 @@ export function parseVersionFromTag(tag) {
 export function nodeAssetName(platform, arch, version) {
   const os = platform === 'macos' ? 'darwin' : platform === 'windows' ? 'win' : 'linux'
   // 与 Rust 一致：Windows 只提供 x64 发行包（arm64 主机走 x64 模拟）。
-  const cpu = platform === 'windows' ? 'x64' : arch
+  const cpu = arch
   const ext = platform === 'windows' ? 'zip' : 'tar.gz'
   return `node-v${version}-${os}-${cpu}.${ext}`
 }

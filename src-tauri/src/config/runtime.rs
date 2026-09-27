@@ -52,6 +52,7 @@ fn node_pkg_filename(os: &str, arch: &str) -> Result<String, String> {
     match (os, arch) {
         ("macos", "aarch64") => Ok(format!("node-{}-darwin-arm64.tar.gz", NODE_VERSION)),
         ("macos", "x86_64") => Ok(format!("node-{}-darwin-x64.tar.gz", NODE_VERSION)),
+        ("windows", "aarch64") => Ok(format!("node-{}-win-arm64.zip", NODE_VERSION)),
         ("windows", _) => Ok(format!("node-{}-win-x64.zip", NODE_VERSION)),
         ("linux", "x86_64") => Ok(format!("node-{}-linux-x64.tar.gz", NODE_VERSION)),
         ("linux", "aarch64") => Ok(format!("node-{}-linux-arm64.tar.gz", NODE_VERSION)),
@@ -775,7 +776,7 @@ mod tests {
             (
                 "windows",
                 "aarch64",
-                format!("node-{}-win-x64.zip", NODE_VERSION),
+                format!("node-{}-win-arm64.zip", NODE_VERSION),
             ),
             (
                 "macos",
